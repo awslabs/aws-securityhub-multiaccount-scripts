@@ -38,7 +38,7 @@ Resources:
                 Resource: "*"
                 Condition:
                   StringLike:
-                    "iam:AWSServiceName": "overbridge.amazonaws.com"
+                    "iam:AWSServiceName": "securityhub.amazonaws.com"
               - Effect: Allow
                 Action: "securityhub:*"
                 Resource: "*"

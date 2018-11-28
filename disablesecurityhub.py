@@ -157,7 +157,14 @@ if __name__ == '__main__':
                 if account in members[aws_region]:
                     
                     if sh_client.get_master_account().get('Master'):
-                        response = sh_client.disassociate_from_master_account()
+                        try:
+                            response = sh_client.disassociate_from_master_account()
+            
+                        except ClientError as e:
+                            print("Error Processing Account {}".format(account))
+                            failed_accounts.append({
+                                account: repr(e)
+                            })
                     
                     master_clients[aws_region].disassociate_members(
                         AccountIds=[account]
@@ -210,7 +217,7 @@ if __name__ == '__main__':
                 account: repr(e)
             })
 
-    if args.delete_master:
+    if args.delete_master and len(failed_accounts) == 0:
         for aws_region in securityhub_regions:
             master_clients[aws_region].disable_security_hub()
     
