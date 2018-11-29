@@ -217,8 +217,7 @@ if __name__ == '__main__':
                         if members[aws_region][account] == 'Created':
                             # Member has been created in the SecurityHub master account but not invited yet
                             master_clients[aws_region].invite_members(
-                                AccountIds=[account],
-                                DisableEmailNotification=True
+                                AccountIds=[account]
                             )
                         
                             print('Invited Account {monitored} to SecurityHub master account {master} in region {region}'.format(
