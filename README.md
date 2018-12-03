@@ -1,8 +1,8 @@
-## AWS Securityhub Multiaccount Scripts
+## AWS Security Hub Multiaccount Scripts
 
-These scripts automate the process of enabling and disabling Amazon SecurityHub simultaneously across a group of AWS accounts that are in your control. (Note, that you can have one master account and up to a 1000 member accounts).
+These scripts automate the process of enabling and disabling Amazon Security Hub simultaneously across a group of AWS accounts that are in your control. (Note, that you can have one master account and up to a 1000 member accounts).
 
-enablesecurityhub.py will enable SecurityHub, send invitations from the master account and accept invitations in all member accounts. The result will be a master account that contains all security findings for all member accounts. Since SecurityHub is regionally isolated, findings for each member account will roll up to the corresponding region in the master account. For example, the us-east-1 region in your SecurityHub master account will contain the security findings for all us-east-1 findings from all associated member accounts.
+enablesecurityhub.py will enable Security Hub, send invitations from the master account and accept invitations in all member accounts. The result will be a master account that contains all security findings for all member accounts. Since Security Hub is regionally isolated, findings for each member account will roll up to the corresponding region in the master account. For example, the us-east-1 region in your Security Hub master account will contain the security findings for all us-east-1 findings from all associated member accounts.
 
 Note: Account owners of member accounts will recieve an email for each region requesting that they accept the invitation to link their accounts, these emails can be ignored as the script accepts the inventation on their behalf.
 
@@ -86,7 +86,7 @@ If you do not have a common role that includes at least the above permissions yo
         * cd amazon-securityhub-multiaccount-scripts
 
 ### 2. Execute Scripts
-#### 2a. Enable SecurityHub
+#### 2a. Enable Security Hub
 * Copy the required CSV file to this directory
     * Should be in the formation of "AccountId,EmailAddress" with one AccountID and EmailAddress per line.
 
@@ -95,7 +95,7 @@ usage: enablesecurityhub.py [-h] --master_account MASTER_ACCOUNT --assume_role
                           ASSUME_ROLE
                           input_file
 
-Link AWS Accounts to central SecurityHub Account
+Link AWS Accounts to central Security Hub Account
 
 positional arguments:
   input_file            Path to CSV file containing the list of account IDs
@@ -110,7 +110,7 @@ optional arguments:
   
 ```
     
-#### 2b. Disable SecurityHub
+#### 2b. Disable Security Hub
 * Copy the required CSV file to this directory
     * Should be in the formation of "AccountId,EmailAddress,..."
 
@@ -119,7 +119,7 @@ usage: disablesecurityhub.py [-h] --master_account MASTER_ACCOUNT --assume_role
                            ASSUME_ROLE [--delete_master]
                            input_file
 
-Link AWS Accounts to central SecurityHub Account
+Link AWS Accounts to central Security Hub Account
 
 positional arguments:
   input_file            Path to CSV file containing the list of account IDs
