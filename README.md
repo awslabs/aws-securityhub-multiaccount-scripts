@@ -1,6 +1,6 @@
 ## AWS Security Hub Multiaccount Scripts
 
-These scripts automate the process of enabling and disabling Amazon Security Hub simultaneously across a group of AWS accounts that are in your control. (Note, that you can have one master account and up to a 1000 member accounts).
+These scripts automate the process of enabling and disabling AWS Security Hub simultaneously across a group of AWS accounts that are in your control. (Note, that you can have one master account and up to a 1000 member accounts).
 
 enablesecurityhub.py will enable Security Hub, send invitations from the master account and accept invitations in all member accounts. The result will be a master account that contains all security findings for all member accounts. Since Security Hub is regionally isolated, findings for each member account will roll up to the corresponding region in the master account. For example, the us-east-1 region in your Security Hub master account will contain the security findings for all us-east-1 findings from all associated member accounts.
 
