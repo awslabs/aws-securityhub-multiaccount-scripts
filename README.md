@@ -53,7 +53,7 @@ If you do not have a common role that includes at least the above permissions yo
     * RPM: sudo yum -y install python2-pip python2 git
     * sudo pip install boto3
 * Clone the Repository
-    * git clone https://github.com/aws-samples/amazon-securityhub-multiaccount-scripts.git
+    * git clone https://github.com/awslabs/aws-securityhub-multiaccount-scripts.git
 * Copy the CSV containing the account number and email addresses to the instance using one of the methods below
     * S3 `s3 cp s3://bucket/key_name enable.csv .`
     * pscp.exe `pscp local_file_path username@hostname:.`
@@ -66,23 +66,23 @@ If you do not have a common role that includes at least the above permissions yo
         * Install Python https://www.python.org/downloads/windows/
         * Open command prompt:
             * pip install boto3
-        * Download sourcecode from https://github.com/aws-samples/amazon-securityhub-multiaccount-scripts
+        * Download sourcecode from https://github.com/awslabs/aws-securityhub-multiaccount-scripts
         * Change directory of command prompt to the newly downloaded amazon-securityhub-multiaccount-scripts folder
     * Mac:
         * Install Python https://www.python.org/downloads/mac-osx/
         * Open command prompt:
             * pip install boto3
-        * Download sourcecode from https://github.com/aws-samples/amazon-securityhub-multiaccount-scripts
+        * Download sourcecode from https://github.com/awslabs/aws-securityhub-multiaccount-scripts
         * Change directory of command prompt to the newly downloaded amazon-securityhub-multiaccount-scripts folder
     * Linux:
         * sudo apt-get -y install install python2-pip python2 git
         * sudo pip install boto3
-        * git clone https://github.com/aws-samples/amazon-securityhub-multiaccount-scripts
+        * git clone https://github.com/awslabs/aws-securityhub-multiaccount-scripts
         * cd amazon-securityhub-multiaccount-scripts
         Or
         * sudo yum install git python
         * sudo pip install boto3
-        * git clone https://github.com/aws-samples/amazon-securityhub-multiaccount-scripts
+        * git clone https://github.com/awslabs/aws-securityhub-multiaccount-scripts
         * cd amazon-securityhub-multiaccount-scripts
 
 ### 2. Execute Scripts
