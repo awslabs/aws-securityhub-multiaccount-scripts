@@ -238,7 +238,7 @@ if __name__ == '__main__':
         securityhub_regions = [str(item) for item in args.enabled_regions.split(',')]
         print("Enabling members in these regions: {}".format(securityhub_regions))
     else:
-        securityhub_regions = session.get_available_regions('guardduty')
+        securityhub_regions = session.get_available_regions('securityhub')
         print("Enabling members in all available SecurityHub regions {}".format(securityhub_regions))
     
     # Check if enable Standards 
