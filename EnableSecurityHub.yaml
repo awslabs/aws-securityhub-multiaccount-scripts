@@ -29,7 +29,7 @@ Resources:
               - sts:AssumeRole
       Path: /
       Policies:
-        - PolicyName: CreateSerivceLinkedRole
+        - PolicyName: ManageSecurityHub
           PolicyDocument:
             Version: 2012-10-17
             Statement:
@@ -38,10 +38,33 @@ Resources:
                 Resource: "*"
                 Condition:
                   StringLike:
-                    "iam:AWSServiceName": "securityhub.amazonaws.com"
+                    "iam:AWSServiceName": 
+                      - "securityhub.amazonaws.com"
+                      - "config.amazonaws.com"
               - Effect: Allow
                 Action: "securityhub:*"
                 Resource: "*"
+              - Effect: Allow
+                Action: 
+                  - config:DescribeConfigurationRecorders
+                  - config:DescribeDeliveryChannels
+                  - config:DescribeConfigurationRecorderStatus
+                  - config:DeleteConfigurationRecorder
+                  - config:DeleteDeliveryChannel
+                  - config:PutConfigurationRecorder
+                  - config:PutDeliveryChannel
+                  - config:StartConfigurationRecorder
+                Resource: "*"
+              - Effect: "Allow"
+                Action: "iam:PassRole"
+                Resource: "arn:aws:iam::*:role/aws-service-role/config.amazonaws.com/AWSServiceRoleForConfig"
+              - Effect: "Allow"
+                Action:
+                  - "s3:CreateBucket"
+                  - "s3:PutBucketPolicy"
+                  - "s3:ListBucket"
+                Resource: "arn:aws:s3:::config-bucket-*"
+
   InstanceRole:
     Type: AWS::IAM::Role
     Condition: CreateInstanceRole
