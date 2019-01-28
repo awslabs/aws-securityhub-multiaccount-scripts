@@ -183,7 +183,7 @@ if __name__ == '__main__':
     parser.add_argument('input_file', type=argparse.FileType('r'), help='Path to CSV file containing the list of account IDs and Email addresses')
     parser.add_argument('--assume_role', type=str, required=True, help="Role Name to assume in each account")
     parser.add_argument('--enabled_regions', type=str, help="comma separated list of regions to enable SecurityHub. If not specified, all available regions enabled")
-    parser.add_argument('--enable_standards', type=str, required=False,help="comma seperated list of standards ARNs to enable")
+    parser.add_argument('--enable_standards', type=str, required=False,help="comma seperated list of standards ARNs to enable ( i.e. arn:aws:securityhub:::ruleset/cis-aws-foundations-benchmark/v/1.2.0 )")
     args = parser.parse_args()
 
     # Validate master accountId
