@@ -21,6 +21,9 @@ import sys
 import time
 import argparse
 import re
+import json
+import random
+import string
 
 from collections import OrderedDict
 from botocore.exceptions import ClientError
@@ -90,6 +93,88 @@ def get_master_members(sh_client, aws_region):
             
     return member_dict
 
+
+def check_config(session,account, region, s3_bucket_name):
+    config = session.client('config', region_name=region)
+    iam = session.client('iam')
+    s3 = session.client('s3', region_name='us-east-1')
+
+    default_bucket_avail = False
+    default_bucket_exists = False
+    try: 
+        iam.create_service_linked_role(AWSServiceName='config.amazonaws.com', Description='A service-linked role required for AWS Config')
+    except ClientError as e:
+        if e.response['ResponseMetadata']['HTTPStatusCode'] == 400:
+            pass # SLR already exists
+        else:
+            print e
+            return False
+    # Check if default bucket name is available.
+    try:
+        s3.list_objects(Bucket='config-bucket-{}'.format(account), MaxKeys=1)
+        default_bucket_exists = True
+        s3_bucket_name = 'config-bucket-{}'.format(account)
+    except ClientError as e:
+        if e.response['ResponseMetadata']['HTTPStatusCode'] == 404:
+            default_bucket_avail = True
+            s3_bucket_name = 'config-bucket-{}'.format(account)
+        pass
+    if not len(config.describe_configuration_recorders()['ConfigurationRecorders']):
+        config.put_configuration_recorder( ConfigurationRecorder={'name':'default','roleARN': 'arn:aws:iam::%s:role/aws-service-role/config.amazonaws.com/AWSServiceRoleForConfig' % account,'recordingGroup': {'allSupported' : True, 'includeGlobalResourceTypes': True}})
+    
+    if config.describe_configuration_recorder_status()['ConfigurationRecordersStatus'][0]['recording']:
+        return True #config is configured and enabled nothing to do here.
+    if len(config.describe_delivery_channels()['DeliveryChannels']):
+        try: 
+            config.start_configuration_recorder(ConfigurationRecorderName=config.describe_configuration_recorder_status()['ConfigurationRecordersStatus'][0]['name'])
+            return True 
+        except ClientError as e:
+            print("Error {} starting configuration recorder for account {} in region {}".format(repr(e), account, region))
+            return False
+    ## Ensure S3 bucket for AWS Config delivery exists 
+    if default_bucket_avail and not default_bucket_exists:
+        try:
+            s3.create_bucket(Bucket=s3_bucket_name) 
+            bucket_policy = {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Sid": "AWSConfigBucketPermissionsCheck",
+                        "Effect": "Allow",
+                        "Principal": {"Service": ["config.amazonaws.com"]},
+                        "Action": "s3:GetBucketAcl",
+                        "Resource": "arn:aws:s3:::%s" % s3_bucket_name},
+                    {
+                        "Sid": " AWSConfigBucketDelivery",
+                        "Effect": "Allow",
+                        "Principal": {"Service": ["config.amazonaws.com"]},
+                        "Action": "s3:PutObject",
+                        "Resource": "arn:aws:s3:::%s/AWSLogs/%s/Config/*" % (s3_bucket_name, account),
+                        "Condition": { "StringEquals": { "s3:x-amz-acl": "bucket-owner-full-control" }}
+                    }]
+            }
+            bucket_policy = json.dumps(bucket_policy)
+            s3.put_bucket_policy(Bucket=s3_bucket_name, Policy=bucket_policy)
+        except ClientError as e:
+            print("Error {} checking bucket for Config delivery in account {}".format(repr(e), account))
+            return False
+    try:
+        config.put_delivery_channel(DeliveryChannel={
+            'name': 'config-s3-delivery', 
+            's3BucketName': s3_bucket_name, 
+            'configSnapshotDeliveryProperties': {'deliveryFrequency': 'TwentyFour_Hours' } 
+            })
+        config.start_configuration_recorder(ConfigurationRecorderName=config.describe_configuration_recorder_status()['ConfigurationRecordersStatus'][0]['name'])
+        return True
+    except ClientError as e:
+        print("Error {} enabling Config on account {}".format(repr(e), account))
+        return False
+    return False
+        
+            
+    
+
+
 if __name__ == '__main__':
     
     # Setup command line arguments
@@ -98,6 +183,7 @@ if __name__ == '__main__':
     parser.add_argument('input_file', type=argparse.FileType('r'), help='Path to CSV file containing the list of account IDs and Email addresses')
     parser.add_argument('--assume_role', type=str, required=True, help="Role Name to assume in each account")
     parser.add_argument('--enabled_regions', type=str, help="comma separated list of regions to enable SecurityHub. If not specified, all available regions enabled")
+    parser.add_argument('--enable_standards', type=str, required=False,help="comma seperated list of standards ARNs to enable ( i.e. arn:aws:securityhub:::ruleset/cis-aws-foundations-benchmark/v/1.2.0 )")
     args = parser.parse_args()
 
     # Validate master accountId
@@ -107,6 +193,27 @@ if __name__ == '__main__':
     # Generate dict with account & email information
     aws_account_dict = OrderedDict()
     
+    # Notify on Config dependency if standards are enabled
+    if args.enable_standards:
+        print(
+        '''
+        *****************************************************************************************************************************************************************************************
+        *      By turning on this Standards you will enable security evaluations to run. For current pricing and example scenarios please refer to the current AWS Security Hub pricing.        *
+        *      Important: You must enable AWS Config for all resources in each AWS Region where you will be running a Standard. If Config is not already enabled it will be enabled and         *
+        *      configured in each region.                                                                                                                                                       *
+        *                                                                                                                                                                                       *
+        *      In addition to AWS Security Hub charges, you will also incur charges for the Configuration Items recorded by AWS Config, as per the AWS Config pricing. These charges are        *
+        *      separate from (and not included in) AWS Security Hub pricing.                                                                                                                    *
+        *****************************************************************************************************************************************************************************************
+        
+        Continue?(yes/no):
+        '''
+        )
+        notify_config_response = ''
+        if 'yes' not in raw_input(notify_config_response).lower():
+            print("Exiting..")
+            raise SystemExit, 0
+     
     for acct in args.input_file.readlines():
         split_line = acct.replace("\n",'').split(",")
         if len(split_line) < 2:
@@ -134,6 +241,13 @@ if __name__ == '__main__':
         securityhub_regions = session.get_available_regions('securityhub')
         print("Enabling members in all available SecurityHub regions {}".format(securityhub_regions))
     
+    # Check if enable Standards 
+    standards_arns = []
+    if args.enable_standards:
+        standards_arns = [str(item) for item in args.enable_standards.split(',')]
+        print("Enabling the following Security Hub Standards for enabled account(s) and region(s): {}".format(standards_arns))
+        
+
     # Processing Master account
     #master_session = assume_role(args.master_account, args.assume_role)
     master_session = boto3.Session()
@@ -149,6 +263,8 @@ if __name__ == '__main__':
     for account in aws_account_dict.keys():
         try:
             session = assume_role(account, args.assume_role)
+            # Generate unique bucket name for Config delivery channel if default is not avaialable.
+            s3_bucket_name = 'config-bucket-{}-{}'.format(''.join(random.SystemRandom().choice(string.ascii_lowercase + string.digits) for _ in range(5)), account)
             
             for aws_region in securityhub_regions:
                 print('Beginning {account} in {region}'.format(
@@ -157,9 +273,29 @@ if __name__ == '__main__':
                 ))
                 
                 sh_client = session.client('securityhub', region_name=aws_region)
-                
-                sh_client.enable_security_hub()
-        
+                #Ensure AWS Config is enabled for the account/region and enable if it not already enabled.
+                config_result = check_config(session, account, aws_region, s3_bucket_name)
+                if not config_result:
+                    failed_accounts.append({account: "Error validating or enabling AWS Config for account {} in {} - requested standards not enabled".format(account,aws_region)})
+                else:
+                    sh_client.enable_security_hub()
+                    for standard in standards_arns:
+                        sh_client.batch_enable_standards(StandardsSubscriptionRequests=[{'StandardsArn' : standard}])
+                        start_time = int(time.time())
+                        status = ''
+                        while status != 'READY':
+                            if (int(time.time()) - start_time) > 100:
+                                print("Timeout waiting for READY state enabling standard {standard} in region {region} for account {account}, last state: {status}".format(standard=standard,region=aws_region, account=account, status=status))
+                                break
+                            enabled_standards = sh_client.get_enabled_standards()
+                            for enabled_stanard in enabled_standards['StandardsSubscriptions']:
+                                if enabled_stanard['StandardsArn'] == standard:
+                                    status = enabled_stanard['StandardsStatus']
+                        if status == 'READY':
+                            print("Finished enabling stanard {} on account {} for region {}".format(standard,account, aws_region))
+                                
+                    
+
                 if account not in members[aws_region]:
         
                     master_clients[aws_region].create_members(
