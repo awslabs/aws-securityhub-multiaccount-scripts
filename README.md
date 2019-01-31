@@ -2,9 +2,7 @@
 
 These scripts automate the process of enabling and disabling AWS Security Hub simultaneously across a group of AWS accounts that are in your control. (Note, that you can have one master account and up to a 1000 member accounts).
 
-enablesecurityhub.py will enable Security Hub, send invitations from the master account and accept invitations in all member accounts. The result will be a master account that contains all security findings for all member accounts. Since Security Hub is regionally isolated, findings for each member account will roll up to the corresponding region in the master account. For example, the us-east-1 region in your Security Hub master account will contain the security findings for all us-east-1 findings from all associated member accounts.
-
-Note: Account owners of member accounts will recieve an email for each region requesting that they accept the invitation to link their accounts, these emails can be ignored as the script accepts the inventation on their behalf.
+enablesecurityhub.py will enable Security Hub, send invitations from the master account and accept invitations in all member accounts. The result will be a master account that contains all security findings for all member accounts. Since Security Hub is regionally isolated, findings for each member account will roll up to the corresponding region in the master account. For example, the us-east-1 region in your Security Hub master account will contain the security findings for all us-east-1 findings from all associated member accounts.  If you enable Standards benchmarks AWS Config must be enabled, if there are regions where AWS Config is not already enabled the script will enable it.
 
 
 ## License Summary
@@ -13,32 +11,63 @@ This sample code is made available under a modified MIT license. See the LICENSE
 
 ## Prerequisites
 
-* The scripts depend on a pre-existing role in the master account and all of the member accounts that will be linked, the role name must be the same in all accounts and the role trust relationship needs to allow your instance or local credentials to assume the role.  The AmazonSecurityHubFullAccess managed poilicy (shown below) contains the required permissions for the script to succeed:
+* The scripts depend on a pre-existing role in the master account and all of the member accounts that will be linked, the role name must be the same in all accounts and the role trust relationship needs to allow your instance or local credentials to assume the role.  The poilicy document below contains the required permissions for the script to succeed:
 
 ``` 
 {
     "Version": "2012-10-17",
     "Statement": [
         {
-            "Effect": "Allow",
-            "Action": "securityhub:*",
-            "Resource": "*"
-        },
-        {
-            "Effect": "Allow",
-            "Action": "iam:CreateServiceLinkedRole",
-            "Resource": "*",
             "Condition": {
                 "StringLike": {
-                    "iam:AWSServiceName": "securityhub.amazonaws.com"
+                    "iam:AWSServiceName": [
+                        "securityhub.amazonaws.com",
+                        "config.amazonaws.com"
+                    ]
                 }
-            }
+            },
+            "Action": "iam:CreateServiceLinkedRole",
+            "Resource": "*",
+            "Effect": "Allow"
+        },
+        {
+            "Action": "securityhub:*",
+            "Resource": "*",
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "config:DescribeConfigurationRecorders",
+                "config:DescribeDeliveryChannels",
+                "config:DescribeConfigurationRecorderStatus",
+                "config:DeleteConfigurationRecorder",
+                "config:DeleteDeliveryChannel",
+                "config:PutConfigurationRecorder",
+                "config:PutDeliveryChannel",
+                "config:StartConfigurationRecorder"
+            ],
+            "Resource": "*",
+            "Effect": "Allow"
+        },
+        {
+            "Action": "iam:PassRole",
+            "Resource": "arn:aws:iam::*:role/aws-service-role/config.amazonaws.com/AWSServiceRoleForConfig",
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "s3:CreateBucket",
+                "s3:PutBucketPolicy",
+                "s3:ListBucket"
+            ],
+            "Resource": "arn:aws:s3:::config-bucket-*",
+            "Effect": "Allow"
         }
     ]
 }
 ```
 
-If you do not have a common role that includes at least the above permissions you will need to create a role in each member account as well as the master account with at least the above permissions.  When creating the role ensure you use the same role name in every account and select the AmazonSecurityHubFullAccess managed policy.  You can use the EnableSecurityHub.yaml CloudFormation Template to automate this process, as the tempalte creates only global resources it can be created in any region.    
+If you do not have a common role that includes at least the above permissions you will need to create a role in each member account as well as the master account with at least the above permissions.  When creating the role ensure you use the same role name in every account.  You can use the EnableSecurityHub.yaml CloudFormation Template to automate this process, as the tempalte creates only global resources it can be created in any region.    
 
 * A CSV file that includes the list of accounts to be linked to the master account.  Accounts should be listed one per line in the format of AccountId,EmailAddress.  The EmailAddress must be the email associated with the root account.
 * Master AccountId which will recieve findings for all the linked accounts within the CSV file 
@@ -107,6 +136,8 @@ optional arguments:
                         AccountId for Central AWS Account
   --assume_role ASSUME_ROLE
                         Role Name to assume in each account
+  --enable_standards ENABLE_STANDARDS
+                        comma seperated list of standards ARNs to enable (ex: arn:aws:securityhub:::ruleset/cis-aws-foundations-benchmark/v/1.2.0 )
   
 ```
     
@@ -131,5 +162,8 @@ optional arguments:
                         AccountId for Central AWS Account
   --assume_role ASSUME_ROLE
                         Role Name to assume in each account
-  --delete_master       Delete the master Gd Detector
+  --delete_master       Disable SecurityHub in Master
+  --enabled_regions ENABLED_REGIONS
+                        comma separated list of regions to remove SecurityHub.
+                        If not specified, all available regions disabled
 ```
