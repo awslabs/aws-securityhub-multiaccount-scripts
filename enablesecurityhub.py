@@ -249,8 +249,8 @@ if __name__ == '__main__':
         
 
     # Processing Master account
-    #master_session = assume_role(args.master_account, args.assume_role)
-    master_session = boto3.Session()
+    master_session = assume_role(args.master_account, args.assume_role)
+    #master_session = boto3.Session()
     master_clients = {}
     members = {}
     for aws_region in securityhub_regions:
