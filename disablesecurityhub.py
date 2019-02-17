@@ -93,12 +93,13 @@ def assume_role(aws_account_number, role_name):
 if __name__ == '__main__':
     
     # Setup command line arguments
-    parser = argparse.ArgumentParser(description='Link AWS Accounts to central SecurityHub Account')
+    parser = argparse.ArgumentParser(description='Disable and unlink AWS Accounts from central SecurityHub Account')
     parser.add_argument('--master_account', type=int, required=True, help="AccountId for Central AWS Account")
     parser.add_argument('input_file', type=argparse.FileType('r'), help='Path to CSV file containing the list of account IDs and Email addresses')
     parser.add_argument('--assume_role', type=str, required=True, help="Role Name to assume in each account")
     parser.add_argument('--delete_master', action='store_true', default=False, help="Disable SecurityHub in Master")
     parser.add_argument('--enabled_regions', type=str, help="comma separated list of regions to remove SecurityHub. If not specified, all available regions disabled")
+    parser.add_argument('--disable_standards_only', type=str, required=False,help="comma seperated list of stanards ARNs to disable (ie. arn:aws:securityhub:::ruleset/cis-aws-foundations-benchmark/v/1.2.0 )")
     args = parser.parse_args()
     
     # Validate master accountId
@@ -124,16 +125,25 @@ if __name__ == '__main__':
     # Getting SecurityHub regions
     session = boto3.session.Session()
     securityhub_regions = []
-    if args.enabled_regions:
-        securityhub_regions = [str(item) for item in args.enabled_regions.split(',')]
-        print("Disabling members in these regions: {}".format(securityhub_regions))
-        
+    if args.disable_standards_only: 
+        standards_arns = [str(item) for item in args.disable_standards_only.split(',')]
+        if args.enabled_regions:
+            securityhub_regions = [str(item) for item in args.enabled_regions.split(',')]
+            print("Disabling standards: {} in these regions: {}".format(args.disable_standards_only, securityhub_regions))
+        else:
+            securityhub_regions = session.get_available_regions('securityhub')
+            print("Disabling standards: {} in all available SecurityHub regions {}".format(args.disable_standards_only,securityhub_regions))
+    
     else:
-        securityhub_regions = session.get_available_regions('securityhub')
-        print("Disabling members in all available SecurityHub regions {}".format(securityhub_regions))
+        if args.enabled_regions:
+            securityhub_regions = [str(item) for item in args.enabled_regions.split(',')]
+            print("Disabling members in these regions: {}".format(securityhub_regions))
+        else:
+            securityhub_regions = session.get_available_regions('securityhub')
+            print("Disabling members in all available SecurityHub regions {}".format(securityhub_regions))
     
-    
-    master_session = boto3.Session()
+    master_session = assume_role(args.master_account, args.assume_role)
+    #master_session = boto3.Session()
     master_clients = {}
     members = {}
     for aws_region in securityhub_regions:
@@ -153,58 +163,67 @@ if __name__ == '__main__':
                 ))
                 
                 sh_client = session.client('securityhub', region_name=aws_region)
-                
-                if account in members[aws_region]:
-                    
-                    if sh_client.get_master_account().get('Master'):
+                if args.disable_standards_only:
+                    for standard in standards_arns:
                         try:
-                            response = sh_client.disassociate_from_master_account()
-            
+                            subscription_arn = 'arn:aws:securityhub:{}:{}:subscription/{}'.format(aws_region, account,standard.split(':')[-1].split('/',1)[1])
+                            sh_client.batch_disable_standards(StandardsSubscriptionArns=[subscription_arn])
+                            print("Finished disabling stanard {} on account {} for region {}".format(standard,account, aws_region))
                         except ClientError as e:
-                            print("Error Processing Account {}".format(account))
-                            failed_accounts.append({
-                                account: repr(e)
-                            })
-                    
-                    master_clients[aws_region].disassociate_members(
-                        AccountIds=[account]
-                    )
-                    
-                    time.sleep(2)
-                    
-                    master_clients[aws_region].delete_members(
-                        AccountIds=[account]
-                    )
-                
-                    print('Removed Account {monitored} from member list in SecurityHub master account {master} for region {region}'.format(
-                        monitored=account,
-                        master=args.master_account,
-                        region=aws_region
-                    ))
-                                
-                    start_time = int(time.time())
-                    while account in members[aws_region]:
-                        if (int(time.time()) - start_time) > 300:
-                            print("Membership did not show up for account {}, skipping".format(account))
-                            failed_accounts.append({
-                                account: "Membership did not show up for account {} in {}".format(
-                                    account,
-                                    aws_region
-                                )
-                            })
-                            break
-                        
-                        time.sleep(5)
-                        members[aws_region] = get_master_members(master_clients[aws_region], aws_region)
-
+                            print("Error disabling standards for account {}".format(account))
+                            failed_accounts.append({ account : repr(e)})
                 else:
-                    print('Account {monitored} is not a member of {master} in region {region}'.format(
-                        monitored=account,
-                        master=args.master_account,
-                        region=aws_region
-                    ))
+                    if account in members[aws_region]:
+                    
+                        if sh_client.get_master_account().get('Master'):
+                            try:
+                                response = sh_client.disassociate_from_master_account()
                 
-                sh_client.disable_security_hub()
+                            except ClientError as e:
+                                print("Error Processing Account {}".format(account))
+                                failed_accounts.append({
+                                    account: repr(e)
+                                })
+                        
+                        master_clients[aws_region].disassociate_members(
+                            AccountIds=[account]
+                        )
+                        
+                        time.sleep(2)
+                        
+                        master_clients[aws_region].delete_members(
+                            AccountIds=[account]
+                        )
+                    
+                        print('Removed Account {monitored} from member list in SecurityHub master account {master} for region {region}'.format(
+                            monitored=account,
+                            master=args.master_account,
+                            region=aws_region
+                        ))
+                                    
+                        start_time = int(time.time())
+                        while account in members[aws_region]:
+                            if (int(time.time()) - start_time) > 300:
+                                print("Membership did not show up for account {}, skipping".format(account))
+                                failed_accounts.append({
+                                    account: "Membership did not show up for account {} in {}".format(
+                                        account,
+                                        aws_region
+                                    )
+                                })
+                                break
+                            
+                            time.sleep(5)
+                            members[aws_region] = get_master_members(master_clients[aws_region], aws_region)
+
+                    else:
+                        print('Account {monitored} is not a member of {master} in region {region}'.format(
+                            monitored=account,
+                            master=args.master_account,
+                            region=aws_region
+                        ))
+                    
+                    sh_client.disable_security_hub()
 
             # Refresh the member dictionary
             members[aws_region] = get_master_members(master_clients[aws_region], aws_region)
@@ -217,10 +236,12 @@ if __name__ == '__main__':
                 account: repr(e)
             })
 
-    if args.delete_master and len(failed_accounts) == 0:
+    if args.delete_master and len(failed_accounts) == 0 and not args.disable_standards_only:
         for aws_region in securityhub_regions:
             master_clients[aws_region].disable_security_hub()
-    
+    if args.delete_master and len(failed_accounts) == 0 and  args.disable_standards_only:
+        for aws_region in securityhub_regions:
+            master_clients[aws_region].batch_disable_standards(StandardsSubscriptionArns = [ args.disable_standards_only])
     if len(failed_accounts) > 0:
         print("---------------------------------------------------------------")
         print("Failed Accounts")

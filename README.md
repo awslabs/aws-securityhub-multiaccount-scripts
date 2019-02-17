@@ -146,11 +146,13 @@ optional arguments:
     * Should be in the formation of "AccountId,EmailAddress,..."
 
 ```
-usage: disablesecurityhub.py [-h] --master_account MASTER_ACCOUNT --assume_role
-                           ASSUME_ROLE [--delete_master]
-                           input_file
+usage: disablesecurityhub.py [-h] --master_account MASTER_ACCOUNT
+                             --assume_role ASSUME_ROLE [--delete_master]
+                             [--enabled_regions ENABLED_REGIONS]
+                             [--disable_standards_only DISABLE_STANDARDS_ONLY]
+                             input_file
 
-Link AWS Accounts to central Security Hub Account
+Disable and unlink AWS Accounts from central SecurityHub Account
 
 positional arguments:
   input_file            Path to CSV file containing the list of account IDs
@@ -166,4 +168,8 @@ optional arguments:
   --enabled_regions ENABLED_REGIONS
                         comma separated list of regions to remove SecurityHub.
                         If not specified, all available regions disabled
+  --disable_standards_only DISABLE_STANDARDS_ONLY
+                        comma seperated list of stanards ARNs to disable (ie.
+                        arn:aws:securityhub:::ruleset/cis-aws-foundations-
+                        benchmark/v/1.2.0 )
 ```
