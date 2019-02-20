@@ -111,7 +111,7 @@ if __name__ == '__main__':
     aws_account_dict = OrderedDict()
     
     for acct in args.input_file.readlines():
-        split_line = acct.replace("\n",'').split(",")
+        split_line = acct.rstrip().split(",")
         if len(split_line) < 2:
             print("Unable to process line: {}".format(acct))
             continue
