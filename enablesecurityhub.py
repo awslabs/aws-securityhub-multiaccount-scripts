@@ -27,7 +27,7 @@ import string
 
 from collections import OrderedDict
 from botocore.exceptions import ClientError
-
+from six.moves import input as raw_input
 def assume_role(aws_account_number, role_name):
     """
     Assumes the provided role in each account and returns a SecurityHub client
@@ -107,7 +107,7 @@ def check_config(session,account, region, s3_bucket_name):
         if e.response['ResponseMetadata']['HTTPStatusCode'] == 400:
             pass # SLR already exists
         else:
-            print e
+            print(e)
             return False
     # Check if default bucket name is available.
     try:
@@ -212,7 +212,7 @@ if __name__ == '__main__':
         notify_config_response = ''
         if 'yes' not in raw_input(notify_config_response).lower():
             print("Exiting..")
-            raise SystemExit, 0
+            raise SystemExit(0)
      
     for acct in args.input_file.readlines():
         split_line = acct.rstrip().split(",")
