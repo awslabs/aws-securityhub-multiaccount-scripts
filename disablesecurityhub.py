@@ -99,7 +99,7 @@ if __name__ == '__main__':
     parser.add_argument('--assume_role', type=str, required=True, help="Role Name to assume in each account")
     parser.add_argument('--delete_master', action='store_true', default=False, help="Disable SecurityHub in Master")
     parser.add_argument('--enabled_regions', type=str, help="comma separated list of regions to remove SecurityHub. If not specified, all available regions disabled")
-    parser.add_argument('--disable_standards_only', type=str, required=False,help="comma seperated list of stanards ARNs to disable (ie. arn:aws:securityhub:::ruleset/cis-aws-foundations-benchmark/v/1.2.0 )")
+    parser.add_argument('--disable_standards_only', type=str, required=False,help="comma separated list of standards ARNs to disable (ie. arn:aws:securityhub:::ruleset/cis-aws-foundations-benchmark/v/1.2.0 )")
     args = parser.parse_args()
     
     # Validate master accountId
