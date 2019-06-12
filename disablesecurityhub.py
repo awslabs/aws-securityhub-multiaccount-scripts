@@ -94,16 +94,16 @@ if __name__ == '__main__':
     
     # Setup command line arguments
     parser = argparse.ArgumentParser(description='Disable and unlink AWS Accounts from central SecurityHub Account')
-    parser.add_argument('--master_account', type=int, required=True, help="AccountId for Central AWS Account")
+    parser.add_argument('--master_account', type=str, required=True, help="AccountId for Central AWS Account")
     parser.add_argument('input_file', type=argparse.FileType('r'), help='Path to CSV file containing the list of account IDs and Email addresses')
     parser.add_argument('--assume_role', type=str, required=True, help="Role Name to assume in each account")
     parser.add_argument('--delete_master', action='store_true', default=False, help="Disable SecurityHub in Master")
     parser.add_argument('--enabled_regions', type=str, help="comma separated list of regions to remove SecurityHub. If not specified, all available regions disabled")
-    parser.add_argument('--disable_standards_only', type=str, required=False,help="comma seperated list of stanards ARNs to disable (ie. arn:aws:securityhub:::ruleset/cis-aws-foundations-benchmark/v/1.2.0 )")
+    parser.add_argument('--disable_standards_only', type=str, required=False,help="comma separated list of standards ARNs to disable (ie. arn:aws:securityhub:::ruleset/cis-aws-foundations-benchmark/v/1.2.0 )")
     args = parser.parse_args()
     
     # Validate master accountId
-    if not re.match(r'[0-9]{12}',str(args.master_account)):
+    if not re.match(r'[0-9]{12}',args.master_account):
         raise ValueError("Master AccountId is not valid")
     
     
@@ -168,7 +168,7 @@ if __name__ == '__main__':
                         try:
                             subscription_arn = 'arn:aws:securityhub:{}:{}:subscription/{}'.format(aws_region, account,standard.split(':')[-1].split('/',1)[1])
                             sh_client.batch_disable_standards(StandardsSubscriptionArns=[subscription_arn])
-                            print("Finished disabling stanard {} on account {} for region {}".format(standard,account, aws_region))
+                            print("Finished disabling standard {} on account {} for region {}".format(standard,account, aws_region))
                         except ClientError as e:
                             print("Error disabling standards for account {}".format(account))
                             failed_accounts.append({ account : repr(e)})
