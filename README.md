@@ -136,6 +136,9 @@ optional arguments:
                         AccountId for Central AWS Account
   --assume_role ASSUME_ROLE
                         Role Name to assume in each account
+  --enabled_regions ENABLED_REGIONS
+                        comma separated list of regions to enable SecurityHub.
+                        If not specified, all available regions are enabled
   --enable_standards ENABLE_STANDARDS
                         comma separated list of standards ARNs to enable (ex: arn:aws:securityhub:::ruleset/cis-aws-foundations-benchmark/v/1.2.0 )
   
