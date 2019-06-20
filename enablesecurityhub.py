@@ -255,7 +255,15 @@ if __name__ == '__main__':
     members = {}
     for aws_region in securityhub_regions:
         master_clients[aws_region] = master_session.client('securityhub', region_name=aws_region)
-        master_clients[aws_region].enable_security_hub()
+        try: 
+            master_clients[aws_region].enable_security_hub()
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'ResourceConflictException':
+                pass
+            else:
+                print("Error: Unable to enable Security Hub on Master account in region {}").format(aws_region)
+                raise SystemExit(0)
+
         members[aws_region] = get_master_members(master_clients[aws_region], aws_region)
 
     # Processing accounts to be linked
@@ -278,7 +286,11 @@ if __name__ == '__main__':
                 if not config_result:
                     failed_accounts.append({account: "Error validating or enabling AWS Config for account {} in {} - requested standards not enabled".format(account,aws_region)})
                 else:
-                    sh_client.enable_security_hub()
+                    try:
+                        sh_client.enable_security_hub()
+                    except ClientError as e:
+                        if e.response['Error']['Code'] == 'ResourceConflictException':
+                            pass
                     for standard in standards_arns:
                         sh_client.batch_enable_standards(StandardsSubscriptionRequests=[{'StandardsArn' : standard}])
                         start_time = int(time.time())
@@ -394,7 +406,7 @@ if __name__ == '__main__':
             failed_accounts.append({
                 account: repr(e)
             })
-    
+
     if len(failed_accounts) > 0:
         print("---------------------------------------------------------------")
         print("Failed Accounts")
