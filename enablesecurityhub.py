@@ -199,7 +199,7 @@ if __name__ == '__main__':
                         help="comma separated list of regions to enable SecurityHub. If not specified, all available regions enabled")
     parser.add_argument('--enable_standards', type=str, required=False,
                         help="comma separated list of standards ARNs to enable ( i.e. arn:aws:securityhub:::ruleset/cis-aws-foundations-benchmark/v/1.2.0 )")
-    parser.add_argument('--yes', required=False, help="Assume Yes on confirmation request")
+    parser.add_argument('-y','--yes', required=False, help="Assume Yes on confirmation request", action="store_true")
 
     args = parser.parse_args()
 
@@ -226,10 +226,13 @@ if __name__ == '__main__':
             Continue?(yes/no):
             '''
         )
-        notify_config_response = ''
-        if 'yes' not in raw_input(notify_config_response).lower():
-            print("Exiting..")
-            raise SystemExit(0)
+        if args.yes:
+            print( "Skipping prompt because of command line option")
+        else:
+            notify_config_response = ''
+            if 'yes' not in raw_input(notify_config_response).lower():
+                print("Exiting..")
+                raise SystemExit(0)
 
     for acct in args.input_file.readlines():
         split_line = acct.rstrip().split(",")
@@ -313,20 +316,37 @@ if __name__ == '__main__':
                     except ClientError as e:
                         if e.response['Error']['Code'] == 'ResourceConflictException':
                             pass
+
+                    # Activate any standards that were requested
                     for standard in standards_arns:
-                        sh_client.batch_enable_standards(StandardsSubscriptionRequests=[{'StandardsArn' : standard}])
+                        # Check first if it is already active
+                        enabled_standards = sh_client.get_enabled_standards()
+                        for enabled_stanard in enabled_standards['StandardsSubscriptions']:
+                            if enabled_stanard['StandardsArn'] == standard:
+                                status = enabled_stanard['StandardsStatus']
+                        if status == 'READY':
+                            print('Standard already active, skipping')
+                            continue
+
+                        # It's not active (yet)
+                        if status!='PENDING':
+                           sh_client.batch_enable_standards(StandardsSubscriptionRequests=[{'StandardsArn' : standard}])
+
+                        # Wait for it to become active
                         start_time = int(time.time())
                         status = ''
                         while status != 'READY':
-                            if (int(time.time()) - start_time) > 100:
+                            if (int(time.time()) - start_time) > 60:
                                 print("Timeout waiting for READY state enabling standard {standard} in region {region} for account {account}, last state: {status}".format(standard=standard,region=aws_region, account=account, status=status))
                                 break
+                            time.sleep(2)
                             enabled_standards = sh_client.get_enabled_standards()
+                            print(enabled_standards['StandardsSubscriptions'])
                             for enabled_stanard in enabled_standards['StandardsSubscriptions']:
                                 if enabled_stanard['StandardsArn'] == standard:
                                     status = enabled_stanard['StandardsStatus']
                         if status == 'READY':
-                            print("Finished enabling stanard {} on account {} for region {}".format(standard, account,
+                            print("Finished enabling standard {} on account {} for region {}".format(standard, account,
                                                                                                     aws_region))
 
                 if account == args.master_account:
