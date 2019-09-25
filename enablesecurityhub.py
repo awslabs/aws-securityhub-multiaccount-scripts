@@ -203,12 +203,16 @@ def getAccountListFromFile(fileh):
 
 def getAccountListFromOrg(session):
     result=OrderedDict()
-    orgclient=session.client('organizations')
-    for tmpActs in orgclient.get_paginator('list_accounts').paginate():
-        for tmpAct in tmpActs['Accounts']:
-            if tmpAct['Status'] == 'ACTIVE':
-                result[tmpAct['Id']] =  tmpAct['Email']
+    try:
+        orgclient=session.client('organizations')
+        for tmpActs in orgclient.get_paginator('list_accounts').paginate():
+            for tmpAct in tmpActs['Accounts']:
+                if tmpAct['Status'] == 'ACTIVE':
+                    result[tmpAct['Id']] = tmpAct['Email']
+    except Exception as e:
+        print("WARNING: Failed retrieve accounts from org : {}".format(str(e)))
     return result
+
 
 
 
@@ -271,7 +275,9 @@ if __name__ == '__main__':
         print ("Retrieving account list from org...")
         aws_account_dict=getAccountListFromOrg(session)
 
-
+    if not aws_account_dict:
+        print("No accounts specified.  Aborting")
+        exit(1)
 
     # Getting SecurityHub regions
     securityhub_regions = []
@@ -305,7 +311,7 @@ if __name__ == '__main__':
             if e.response['Error']['Code'] == 'ResourceConflictException':
                 pass
             else:
-                print("Error: Unable to enable Security Hub on Master account in region {}").format(aws_region)
+                print("Error: Unable to enable Security Hub on Master account in region {}".format(aws_region))
                 raise SystemExit(0)
 
         members[aws_region] = get_master_members(master_clients[aws_region], aws_region)
