@@ -184,6 +184,31 @@ def check_config(session,account, region, s3_bucket_name):
         return False
     return False
 
+def getAccountListFromFile(fileh):
+    aws_account_dict = OrderedDict()
+    for acct in fileh.readlines():
+        split_line = acct.rstrip().split(",")
+        if len(split_line) < 2:
+            print("Unable to process line: {}".format(acct))
+            continue
+
+        if not re.match(r'[0-9]{12}', str(split_line[0])):
+            print("Invalid account number {}, skipping".format(split_line[0]))
+            continue
+
+        aws_account_dict[split_line[0]] = split_line[1]
+    return aws_account_dict
+
+
+
+def getAccountListFromOrg(session):
+    result=OrderedDict()
+    orgclient=session.client('organizations')
+    for tmpActs in orgclient.get_paginator('list_accounts').paginate():
+        for tmpAct in tmpActs['Accounts']:
+            if tmpAct['Status'] == 'ACTIVE':
+                result[tmpAct['Id']] =  tmpAct['Email']
+    return result
 
 
 
@@ -192,8 +217,8 @@ if __name__ == '__main__':
     # Setup command line arguments
     parser = argparse.ArgumentParser(description='Link AWS Accounts to central SecurityHub Account')
     parser.add_argument('--master_account', type=str, required=True, help="AccountId for Central AWS Account")
-    parser.add_argument('input_file', type=argparse.FileType('r'),
-                        help='Path to CSV file containing the list of account IDs and Email addresses')
+    parser.add_argument('-i','--input_file', required=False, type=argparse.FileType('r'),
+                        help='Path to CSV file containing the list of account IDs and Email addresses.  If not specified, all accounts in the org will be included.')
     parser.add_argument('--assume_role', type=str, required=True, help="Role Name to assume in each account")
     parser.add_argument('--enabled_regions', type=str,
                         help="comma separated list of regions to enable SecurityHub. If not specified, all available regions enabled")
@@ -207,8 +232,7 @@ if __name__ == '__main__':
     if not re.match(r'[0-9]{12}', args.master_account):
         raise ValueError("Master AccountId is not valid")
 
-    # Generate dict with account & email information
-    aws_account_dict = OrderedDict()
+
 
     # Notify on Config dependency if standards are enabled
     if args.enable_standards:
@@ -234,25 +258,22 @@ if __name__ == '__main__':
                 print("Exiting..")
                 raise SystemExit(0)
 
-    for acct in args.input_file.readlines():
-        split_line = acct.rstrip().split(",")
-        if len(split_line) < 2:
-            print("Unable to process line: {}".format(acct))
-            continue
 
-        if not re.match(r'[0-9]{12}', str(split_line[0])):
-            print("Invalid account number {}, skipping".format(split_line[0]))
-            continue
-
-        aws_account_dict[split_line[0]] = split_line[1]
-
-    # Check length of accounts to be processed
-    if len(aws_account_dict.keys()) > 1000:
-        raise Exception("Only 1000 accounts can be linked to a single master account")
-
-    # Getting SecurityHub regions
     session = boto3.session.Session()
 
+    # Generate dict with account & email information
+    if args.input_file :
+        aws_account_dict= getAccountListFromFile(args.input_file)
+        # Check number of accounts to be processed
+        if len(aws_account_dict.keys()) > 1000:
+            raise Exception("Only 1000 accounts can be linked to a single master account")
+    else:
+        print ("Retrieving account list from org...")
+        aws_account_dict=getAccountListFromOrg(session)
+
+
+
+    # Getting SecurityHub regions
     securityhub_regions = []
     if args.enabled_regions:
         securityhub_regions = [str(item) for item in args.enabled_regions.split(',')]
