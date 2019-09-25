@@ -78,8 +78,8 @@ If you do not have a common role that includes at least the above permissions yo
 * Launch ec2 instance in your master account https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EC2_GetStarted.html
 * Attach an IAM role to an instance that has permissions to allow the instance to call AssumeRole within the master account, if you used the EnableSecurityHub.yaml template an instance role with a profile name of "EnableSecurityHub" has been created, otherwise see the documentation on creating an instance role here:  https://aws.amazon.com/blogs/security/easily-replace-or-attach-an-iam-role-to-an-existing-ec2-instance-by-using-the-ec2-console/ on creating an instance role.
 * Install required software
-    * APT: sudo apt-get -y install python2-pip python2 git
-    * RPM: sudo yum -y install python2-pip python2 git
+    * APT: sudo apt-get -y install python3-pip python3 git
+    * RPM: sudo yum -y install python3-pip python3 git
     * sudo pip install boto3
 * Clone the Repository
     * git clone https://github.com/awslabs/aws-securityhub-multiaccount-scripts.git
@@ -104,7 +104,7 @@ If you do not have a common role that includes at least the above permissions yo
         * Download sourcecode from https://github.com/awslabs/aws-securityhub-multiaccount-scripts
         * Change directory of command prompt to the newly downloaded amazon-securityhub-multiaccount-scripts folder
     * Linux:
-        * sudo apt-get -y install install python2-pip python2 git
+        * sudo apt-get -y install install python3-pip python3 git
         * sudo pip install boto3
         * git clone https://github.com/awslabs/aws-securityhub-multiaccount-scripts
         * cd amazon-securityhub-multiaccount-scripts
@@ -116,32 +116,36 @@ If you do not have a common role that includes at least the above permissions yo
 
 ### 2. Execute Scripts
 #### 2a. Enable Security Hub
-* Copy the required CSV file to this directory
+* Copy the optional CSV file to this directory
     * Should be in the formation of "AccountId,EmailAddress" with one AccountID and EmailAddress per line.
 
 ```
-usage: enablesecurityhub.py [-h] --master_account MASTER_ACCOUNT --assume_role
-                          ASSUME_ROLE
-                          input_file
+usage: enablesecurityhub.py [-h] --master_account MASTER_ACCOUNT
+                            [-i INPUT_FILE] --assume_role ASSUME_ROLE
+                            [--enabled_regions ENABLED_REGIONS]
+                            [--enable_standards ENABLE_STANDARDS] [-y]
 
-Link AWS Accounts to central Security Hub Account
-
-positional arguments:
-  input_file            Path to CSV file containing the list of account IDs
-                        and Email addresses
+Link AWS Accounts to central SecurityHub Account
 
 optional arguments:
   -h, --help            show this help message and exit
   --master_account MASTER_ACCOUNT
                         AccountId for Central AWS Account
+  -i INPUT_FILE, --input_file INPUT_FILE
+                        Path to CSV file containing the list of account IDs
+                        and Email addresses. If not specified, all accounts in
+                        the org will be included.
   --assume_role ASSUME_ROLE
                         Role Name to assume in each account
   --enabled_regions ENABLED_REGIONS
                         comma separated list of regions to enable SecurityHub.
-                        If not specified, all available regions are enabled
+                        If not specified, all available regions enabled
   --enable_standards ENABLE_STANDARDS
-                        comma separated list of standards ARNs to enable (ex: arn:aws:securityhub:::ruleset/cis-aws-foundations-benchmark/v/1.2.0 )
-  
+                        comma separated list of standards ARNs to enable (
+                        i.e. arn:aws:securityhub:::ruleset/cis-aws-
+                        foundations-benchmark/v/1.2.0 )
+  -y, --yes             Assume Yes on confirmation request
+
 ```
     
 #### 2b. Disable Security Hub
