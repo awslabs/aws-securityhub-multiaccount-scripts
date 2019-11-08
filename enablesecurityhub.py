@@ -453,8 +453,6 @@ if __name__ == '__main__':
         print("Failed Accounts")
         print("---------------------------------------------------------------")
         for account in failed_accounts:
-            print("{}: \n\t{}".format(
-                list(account.keys())[0],
-                account[list(account.keys())[0]]
-            ))
-            print("---------------------------------------------------------------")
+            for account_id, message in account.items():
+                print("{}: \n\t{}".format(account_id, message))
+        print("---------------------------------------------------------------")
