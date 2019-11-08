@@ -297,6 +297,9 @@ if __name__ == '__main__':
     # Processing accounts to be linked
     failed_accounts = []
     for account in aws_account_dict.keys():
+        if account == args.master_account:
+            print("Won't try to link master account %s to itself" % account)
+
         try:
 
             session = assume_role(account, args.assume_role)
