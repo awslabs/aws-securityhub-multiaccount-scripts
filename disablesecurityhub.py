@@ -20,6 +20,7 @@ import boto3
 import re
 import argparse
 import time
+import utils
 
 from collections import OrderedDict
 from botocore.exceptions import ClientError
@@ -164,7 +165,8 @@ if __name__ == '__main__':
                 
                 sh_client = session.client('securityhub', region_name=aws_region)
                 if args.disable_standards_only:
-                    for standard in standards_arns:
+                    regional_standards_arns = [utils.get_standard_arn_for_region_and_resource(aws_region, standard) for standard in standards_arns]
+                    for standard in regional_standards_arns:
                         try:
                             subscription_arn = 'arn:aws:securityhub:{}:{}:subscription/{}'.format(aws_region, account,standard.split(':')[-1].split('/',1)[1])
                             sh_client.batch_disable_standards(StandardsSubscriptionArns=[subscription_arn])

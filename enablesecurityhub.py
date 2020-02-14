@@ -24,6 +24,7 @@ import re
 import json
 import random
 import string
+import utils
 
 from collections import OrderedDict
 from botocore.exceptions import ClientError
@@ -183,7 +184,7 @@ if __name__ == '__main__':
     parser.add_argument('input_file', type=argparse.FileType('r'), help='Path to CSV file containing the list of account IDs and Email addresses')
     parser.add_argument('--assume_role', type=str, required=True, help="Role Name to assume in each account")
     parser.add_argument('--enabled_regions', type=str, help="comma separated list of regions to enable SecurityHub. If not specified, all available regions enabled")
-    parser.add_argument('--enable_standards', type=str, required=False,help="comma separated list of standards ARNs to enable ( i.e. arn:aws:securityhub:::ruleset/cis-aws-foundations-benchmark/v/1.2.0 )")
+    parser.add_argument('--enable_standards', type=str, required=False,help="comma separated list of standards ARN resources to enable ( i.e. ruleset/cis-aws-foundations-benchmark/v/1.2.0 )")
     args = parser.parse_args()
 
     # Validate master accountId
@@ -210,7 +211,8 @@ if __name__ == '__main__':
         '''
         )
         notify_config_response = ''
-        if 'yes' not in raw_input(notify_config_response).lower():
+        response = raw_input(notify_config_response).lower()
+        if 'yes' != response and 'y' != response:
             print("Exiting..")
             raise SystemExit(0)
      
@@ -241,12 +243,12 @@ if __name__ == '__main__':
         securityhub_regions = session.get_available_regions('securityhub')
         print("Enabling members in all available SecurityHub regions {}".format(securityhub_regions))
     
-    # Check if enable Standards 
+    # Check if enable Standards
     standards_arns = []
     if args.enable_standards:
         standards_arns = [str(item) for item in args.enable_standards.split(',')]
         print("Enabling the following Security Hub Standards for enabled account(s) and region(s): {}".format(standards_arns))
-        
+
 
     # Processing Master account
     master_session = assume_role(args.master_account, args.assume_role)
@@ -270,6 +272,7 @@ if __name__ == '__main__':
     failed_accounts = []
     for account in aws_account_dict.keys():
         try:
+
             session = assume_role(account, args.assume_role)
             # Generate unique bucket name for Config delivery channel if default is not avaialable.
             s3_bucket_name = 'config-bucket-{}-{}'.format(''.join(random.SystemRandom().choice(string.ascii_lowercase + string.digits) for _ in range(5)), account)
@@ -291,38 +294,45 @@ if __name__ == '__main__':
                     except ClientError as e:
                         if e.response['Error']['Code'] == 'ResourceConflictException':
                             pass
-                    for standard in standards_arns:
-                        sh_client.batch_enable_standards(StandardsSubscriptionRequests=[{'StandardsArn' : standard}])
-                        start_time = int(time.time())
-                        status = ''
-                        while status != 'READY':
-                            if (int(time.time()) - start_time) > 100:
-                                print("Timeout waiting for READY state enabling standard {standard} in region {region} for account {account}, last state: {status}".format(standard=standard,region=aws_region, account=account, status=status))
-                                break
-                            enabled_standards = sh_client.get_enabled_standards()
-                            for enabled_stanard in enabled_standards['StandardsSubscriptions']:
-                                if enabled_stanard['StandardsArn'] == standard:
-                                    status = enabled_stanard['StandardsStatus']
-                        if status == 'READY':
-                            print("Finished enabling stanard {} on account {} for region {}".format(standard,account, aws_region))
-                                
-                    
+
+                    regional_standards_arns = [utils.get_standard_arn_for_region_and_resource(aws_region, standard) for standard in standards_arns]
+                    batch_enable_standards_input = [{'StandardsArn': standard_arn} for standard_arn in regional_standards_arns]
+                    sh_client.batch_enable_standards(StandardsSubscriptionRequests=batch_enable_standards_input)
+
+                    # Verify standards get enabled
+                    standards_to_verify = regional_standards_arns[:]
+                    standards_status = {}
+                    start_time = int(time.time())
+                    while len(standards_to_verify) > 0:
+                        if (int(time.time()) - start_time) > 100:
+                            print("Timeout waiting for READY state enabling standards {standards} in region {region} for account {account}, last state: {status}"
+                                  .format(standards=regional_standards_arns, region=aws_region, account=account, status=standards_status))
+                            break
+                        enabled_standards = sh_client.get_enabled_standards()
+                        for enabled_standard in enabled_standards['StandardsSubscriptions']:
+                            enabled_standard_arn = enabled_standard['StandardsArn']
+                            enabled_standard_status = enabled_standard['StandardsStatus']
+                            standards_status[enabled_standard_arn] = enabled_standard_status
+                            if enabled_standard_arn in standards_to_verify and enabled_standard_status is 'Ready':
+                                print("Finished enabling stanard {} on account {} for region {}".format(enabled_standard_arn,account, aws_region))
+                                standards_to_verify.remove(enabled_standard_arn)
+
 
                 if account not in members[aws_region]:
-        
+
                     master_clients[aws_region].create_members(
                         AccountDetails=[{
                             "AccountId": account,
                             "Email": aws_account_dict[account]
                         }]
                     )
-                
+
                     print('Added Account {monitored} to member list in SecurityHub master account {master} for region {region}'.format(
                         monitored=account,
                         master=args.master_account,
                         region=aws_region
                     ))
-                                
+
                     start_time = int(time.time())
                     while account not in members[aws_region]:
                         if (int(time.time()) - start_time) > 300:
@@ -334,10 +344,9 @@ if __name__ == '__main__':
                                 )
                             })
                             break
-                        
+
                         time.sleep(5)
                         members[aws_region] = get_master_members(master_clients[aws_region], aws_region)
-
                 else:
                     print('Account {monitored} is already a member of {master} in region {region}'.format(
                         monitored=account,
@@ -348,7 +357,7 @@ if __name__ == '__main__':
                 if members[aws_region][account] == 'Associated':
                     # Member is enabled and already being monitored
                     print('Account {account} is already enabled'.format(account=account))
-                
+
                 else:
                     start_time = int(time.time())
                     while members[aws_region][account] != 'Associated':
@@ -361,30 +370,30 @@ if __name__ == '__main__':
                                 )
                             })
                             break
-                        
+
                         if members[aws_region][account] == 'Created':
                             # Member has been created in the SecurityHub master account but not invited yet
                             master_clients[aws_region].invite_members(
                                 AccountIds=[account]
                             )
-                        
+
                             print('Invited Account {monitored} to SecurityHub master account {master} in region {region}'.format(
                                 monitored=account,
                                 master=args.master_account,
                                 region=aws_region
                             ))
-        
+
                         if members[aws_region][account] == 'Invited':
                             # member has been invited so accept the invite
-                            
+
                             response = sh_client.list_invitations()
-                            
+
                             invitation_dict = dict()
-                            
+
                             invitation_id = None
                             for invitation in response['Invitations']:
                                 invitation_id = invitation['InvitationId']
-                            
+
                             if invitation_id is not None:
                                 sh_client.accept_invitation(
                                     InvitationId=invitation_id,
@@ -395,10 +404,10 @@ if __name__ == '__main__':
                                     master=args.master_account,
                                     region=aws_region
                                 ))
-    
+
                         # Refresh the member dictionary
                         members[aws_region] = get_master_members(master_clients[aws_region], aws_region)
-                        
+
                     print('Finished {account} in {region}'.format(account=account, region=aws_region))
                     
         except ClientError as e:
@@ -413,7 +422,7 @@ if __name__ == '__main__':
         print("---------------------------------------------------------------")
         for account in failed_accounts:
             print("{}: \n\t{}".format(
-                account.keys()[0],
-                account[account.keys()[0]]
+                list(account.keys())[0],
+                account[list(account.keys())[0]]
             ))
             print("---------------------------------------------------------------")
