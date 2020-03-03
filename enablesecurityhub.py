@@ -313,7 +313,7 @@ if __name__ == '__main__':
                             enabled_standard_arn = enabled_standard['StandardsArn']
                             enabled_standard_status = enabled_standard['StandardsStatus']
                             standards_status[enabled_standard_arn] = enabled_standard_status
-                            if enabled_standard_arn in standards_to_verify and enabled_standard_status is 'Ready':
+                            if enabled_standard_arn in standards_to_verify and enabled_standard_status is 'READY':
                                 print("Finished enabling stanard {} on account {} for region {}".format(enabled_standard_arn,account, aws_region))
                                 standards_to_verify.remove(enabled_standard_arn)
 
