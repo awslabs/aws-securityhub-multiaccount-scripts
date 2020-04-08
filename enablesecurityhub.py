@@ -243,7 +243,7 @@ if __name__ == '__main__':
         securityhub_regions = session.get_available_regions('securityhub')
         print("Enabling members in all available SecurityHub regions {}".format(securityhub_regions))
     
-    # Check if enable Standards
+    # Check if enable Standards 
     standards_arns = []
     if args.enable_standards:
         standards_arns = [str(item) for item in args.enable_standards.split(',')]
@@ -297,6 +297,9 @@ if __name__ == '__main__':
     # Processing accounts to be linked
     failed_accounts = []
     for account in aws_account_dict.keys():
+        if account == args.master_account:
+            print("Won't try to link master account %s to itself" % account)
+
         try:
 
             session = assume_role(account, args.assume_role)
@@ -344,8 +347,13 @@ if __name__ == '__main__':
                                 standards_to_verify.remove(enabled_standard_arn)
 
 
-                if account not in members[aws_region]:
-
+                if account in members[aws_region]:
+                    print('Account {monitored} is already a member of {master} in region {region}'.format(
+                        monitored=account,
+                        master=args.master_account,
+                        region=aws_region
+                    ))
+                else:
                     master_clients[aws_region].create_members(
                         AccountDetails=[{
                             "AccountId": account,
@@ -373,13 +381,11 @@ if __name__ == '__main__':
 
                         time.sleep(5)
                         members[aws_region] = get_master_members(master_clients[aws_region], aws_region)
-                else:
-                    print('Account {monitored} is already a member of {master} in region {region}'.format(
-                        monitored=account,
-                        master=args.master_account,
-                        region=aws_region
-                    ))
-                
+
+                if account not in members[aws_region]:
+                    print("Account {} could not be joined, skipping".format(account))
+                    continue
+
                 if members[aws_region][account] == 'Associated':
                     # Member is enabled and already being monitored
                     print('Account {account} is already enabled'.format(account=account))
@@ -447,8 +453,6 @@ if __name__ == '__main__':
         print("Failed Accounts")
         print("---------------------------------------------------------------")
         for account in failed_accounts:
-            print("{}: \n\t{}".format(
-                list(account.keys())[0],
-                account[list(account.keys())[0]]
-            ))
-            print("---------------------------------------------------------------")
+            for account_id, message in account.items():
+                print("{}: \n\t{}".format(account_id, message))
+        print("---------------------------------------------------------------")
