@@ -263,7 +263,7 @@ if __name__ == '__main__':
     for account in aws_account_dict.keys():
         try:
             session = assume_role(account, args.assume_role)
-            # Generate unique bucket name for Config delivery channel if default is not avaialable.
+            # Generate unique bucket name for Config delivery channel if default is not available.
             s3_bucket_name = 'config-bucket-{}-{}'.format(''.join(random.SystemRandom().choice(string.ascii_lowercase + string.digits) for _ in range(5)), account)
             
             for aws_region in securityhub_regions:
