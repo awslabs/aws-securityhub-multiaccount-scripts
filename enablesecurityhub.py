@@ -324,27 +324,28 @@ if __name__ == '__main__':
                         if e.response['Error']['Code'] == 'ResourceConflictException':
                             pass
 
-                    regional_standards_arns = [utils.get_standard_arn_for_region_and_resource(aws_region, standard) for standard in standards_arns]
-                    batch_enable_standards_input = [{'StandardsArn': standard_arn} for standard_arn in regional_standards_arns]
-                    sh_client.batch_enable_standards(StandardsSubscriptionRequests=batch_enable_standards_input)
+                    if args.enable_standards:
+                        regional_standards_arns = [utils.get_standard_arn_for_region_and_resource(aws_region, standard) for standard in standards_arns]
+                        batch_enable_standards_input = [{'StandardsArn': standard_arn} for standard_arn in regional_standards_arns]
+                        sh_client.batch_enable_standards(StandardsSubscriptionRequests=batch_enable_standards_input)
 
-                    # Verify standards get enabled
-                    standards_to_verify = regional_standards_arns[:]
-                    standards_status = {}
-                    start_time = int(time.time())
-                    while len(standards_to_verify) > 0:
-                        if (int(time.time()) - start_time) > 100:
-                            print("Timeout waiting for READY state enabling standards {standards} in region {region} for account {account}, last state: {status}"
-                                  .format(standards=regional_standards_arns, region=aws_region, account=account, status=standards_status))
-                            break
-                        enabled_standards = sh_client.get_enabled_standards()
-                        for enabled_standard in enabled_standards['StandardsSubscriptions']:
-                            enabled_standard_arn = enabled_standard['StandardsArn']
-                            enabled_standard_status = enabled_standard['StandardsStatus']
-                            standards_status[enabled_standard_arn] = enabled_standard_status
-                            if enabled_standard_arn in standards_to_verify and enabled_standard_status == 'READY':
-                                print("Finished enabling stanard {} on account {} for region {}".format(enabled_standard_arn,account, aws_region))
-                                standards_to_verify.remove(enabled_standard_arn)
+                        # Verify standards get enabled
+                        standards_to_verify = regional_standards_arns[:]
+                        standards_status = {}
+                        start_time = int(time.time())
+                        while len(standards_to_verify) > 0:
+                            if (int(time.time()) - start_time) > 100:
+                                print("Timeout waiting for READY state enabling standards {standards} in region {region} for account {account}, last state: {status}"
+                                      .format(standards=regional_standards_arns, region=aws_region, account=account, status=standards_status))
+                                break
+                            enabled_standards = sh_client.get_enabled_standards()
+                            for enabled_standard in enabled_standards['StandardsSubscriptions']:
+                                enabled_standard_arn = enabled_standard['StandardsArn']
+                                enabled_standard_status = enabled_standard['StandardsStatus']
+                                standards_status[enabled_standard_arn] = enabled_standard_status
+                                if enabled_standard_arn in standards_to_verify and enabled_standard_status == 'READY':
+                                    print("Finished enabling stanard {} on account {} for region {}".format(enabled_standard_arn,account, aws_region))
+                                    standards_to_verify.remove(enabled_standard_arn)
 
 
                 if account in members[aws_region]:
