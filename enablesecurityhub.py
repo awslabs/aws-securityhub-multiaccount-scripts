@@ -251,22 +251,33 @@ if __name__ == '__main__':
 
 
     # Processing Master account
-    master_session = assume_role(args.master_account, args.assume_role)
+    master_account = args.master_account
+    master_session = assume_role(master_account, args.assume_role)
+    s3_bucket_name = 'config-bucket-{}-{}'.format(''.join(random.SystemRandom().choice(string.ascii_lowercase + string.digits) for _ in range(5)), master_account)
     #master_session = boto3.Session()
     master_clients = {}
     members = {}
+    failed_regions = []
     for aws_region in securityhub_regions:
         master_clients[aws_region] = master_session.client('securityhub', region_name=aws_region)
-        try: 
-            # Enable Security Hub for the Master Account 
-            master_clients[aws_region].enable_security_hub()
-
-            # Enable compliance Standards for Master account 
+        try:
+            # Ensure AWS Config is enabled for the account/region and enable if it's not already enabled
+            config_result = check_config(master_session, master_account, aws_region, s3_bucket_name)
+            if not config_result:
+                failed_regions.append({master_account: "Error validating or enabling AWS Config for account {} in {} - requested standards not enabled".format(master_account, aws_region)})
+            else:
+                try:
+                    # Enable Security Hub in master account
+                    master_clients[aws_region].enable_security_hub()
+                except ClientError as e:
+                    if e.response['Error']['Code'] == 'ResourceConflictException':
+                        pass
+            # Enable compliance Standards for Master account
             compliance_standards_arns = [utils.get_standard_arn_for_region_and_resource(aws_region, standard) for standard in standards_arns]
             batch_enable_standards_input = [{'StandardsArn': standard_arn} for standard_arn in compliance_standards_arns]
             master_clients[aws_region].batch_enable_standards(StandardsSubscriptionRequests=batch_enable_standards_input)
 
-            # Verify standards get enabled in the Master Account 
+            # Verify standards get enabled in the Master Account
             standards_to_verify = compliance_standards_arns[:]
             standards_status = {}
             start_time = int(time.time())
@@ -285,14 +296,25 @@ if __name__ == '__main__':
                         standards_to_verify.remove(enabled_standard_arn)
 
 
+
         except ClientError as e:
-            if e.response['Error']['Code'] == 'ResourceConflictException':
-                pass
-            else:
-                print("Error: Unable to enable Security Hub on Master account in region {}").format(aws_region)
-                raise SystemExit(0)
+            print("Error: Unable to enable Security Hub on Master account in region {}").format(aws_region)
+            raise SystemExit(0)
 
         members[aws_region] = get_master_members(master_clients[aws_region], aws_region)
+
+    if len(failed_regions) > 0:
+        print("---------------------------------------------------------------")
+        print("Failed Regions for master account")
+        print("---------------------------------------------------------------")
+        for region in failed_regions:
+            print("{}: \n\t{}".format(
+                list(region.keys())[0],
+                region[list(region.keys())[0]]
+            ))
+            print("---------------------------------------------------------------")
+
+
 
     # Processing accounts to be linked
     failed_accounts = []
