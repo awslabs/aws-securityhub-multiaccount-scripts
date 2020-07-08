@@ -259,7 +259,7 @@ if __name__ == '__main__':
         master_clients[aws_region] = master_session.client('securityhub', region_name=aws_region)
         try: 
             # Enable Security Hub for the Master Account 
-            master_clients[aws_region].enable_security_hub()
+            master_clients[aws_region].enable_security_hub(EnableDefaultStandards=False)
 
             # Enable compliance Standards for Master account 
             compliance_standards_arns = [utils.get_standard_arn_for_region_and_resource(aws_region, standard) for standard in standards_arns]
@@ -319,7 +319,7 @@ if __name__ == '__main__':
                     failed_accounts.append({account: "Error validating or enabling AWS Config for account {} in {} - requested standards not enabled".format(account,aws_region)})
                 else:
                     try:
-                        sh_client.enable_security_hub()
+                        sh_client.enable_security_hub(EnableDefaultStandards=False)
                     except ClientError as e:
                         if e.response['Error']['Code'] == 'ResourceConflictException':
                             pass
