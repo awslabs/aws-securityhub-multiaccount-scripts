@@ -289,7 +289,7 @@ if __name__ == '__main__':
             if e.response['Error']['Code'] == 'ResourceConflictException':
                 pass
             else:
-                print("Error: Unable to enable Security Hub on Master account in region {}").format(aws_region)
+                print("Error: Unable to enable Security Hub on Master account in region {}".format(aws_region))
                 raise SystemExit(0)
 
         members[aws_region] = get_master_members(master_clients[aws_region], aws_region)
