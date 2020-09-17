@@ -9,7 +9,7 @@ Parameters:
     MinLength: 12
   CreateInstanceRole:
     Type: String
-    Description: Select Yes to create an EC2 instance role that can be attached to an instnace in the Master account which will allow the instance to assume the exection role.  Select No if you plan to run the script locally or are creating the stack in a member account.
+    Description: Select Yes to create an EC2 instance role that can be attached to an instance in the Master account which will allow the instance to assume the exection role.  Select No if you plan to run the script locally or are creating the stack in a member account.
     AllowedValues: ["Yes", "No"]
 Conditions:
   CreateInstanceRole: !Equals [!Ref CreateInstanceRole, "Yes"]
