@@ -387,13 +387,13 @@ if __name__ == '__main__':
                     print("Account {} could not be joined, skipping".format(account))
                     continue
 
-                if members[aws_region][account] == 'Enabled':
+                if members[aws_region][account] == 'Associated' or members[aws_region][account] == 'Enabled':
                     # Member is enabled and already being monitored
                     print('Account {account} is already enabled'.format(account=account))
 
                 else:
                     start_time = int(time.time())
-                    while members[aws_region][account] != 'Enabled':
+                    while members[aws_region][account] != 'Associated' and members[aws_region][account] != 'Enabled':
                         if (int(time.time()) - start_time) > 300:
                             print("Invitation did not show up for account {}, skipping".format(account))
                             failed_accounts.append({
