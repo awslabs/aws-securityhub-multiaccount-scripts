@@ -60,9 +60,7 @@ def assume_role(aws_account_number, role_name):
         aws_session_token=response['Credentials']['SessionToken']
     )
 
-    print("Assumed session for {}.".format(
-        aws_account_number
-    ))
+    # print("Assumed session for {}.".format(aws_account_number))
 
     return session
 
@@ -288,12 +286,14 @@ if __name__ == '__main__':
         except ClientError as e:
             if e.response['Error']['Code'] == 'ResourceConflictException':
                 pass
+            elif e.response['Error']['Code'] == 'UnrecognizedClientException':
+                print("Enable security hub in region \"{}\" failed. Perhaps that region is not enabled in this account".format(aws_region))
+                continue
             else:
                 print("Error: Unable to enable Security Hub on Master account in region {}".format(aws_region))
                 raise SystemExit(0)
 
         members[aws_region] = get_master_members(master_clients[aws_region], aws_region)
-
     # Processing accounts to be linked
     failed_accounts = []
     for account in aws_account_dict.keys():
@@ -314,16 +314,28 @@ if __name__ == '__main__':
 
                 sh_client = session.client('securityhub', region_name=aws_region)
                 #Ensure AWS Config is enabled for the account/region and enable if it not already enabled.
-                config_result = check_config(session, account, aws_region, s3_bucket_name)
+                config_result = None
+                try:
+                    config_result = check_config(session, account, aws_region, s3_bucket_name)
+                except ClientError as e:
+                    if e.response['Error']['Code'] == 'ResourceConflictException':
+                        pass
+                    elif e.response['Error']['Code'] == 'UnrecognizedClientException':
+                        failed_accounts.append({account: "AWS Config failed in {} region {} - Perhaps that region is not enabled in this account".format(account,aws_region)})
+                        continue
+
                 if not config_result:
                     failed_accounts.append({account: "Error validating or enabling AWS Config for account {} in {} - requested standards not enabled".format(account,aws_region)})
+                    continue
                 else:
                     try:
                         sh_client.enable_security_hub()
                     except ClientError as e:
                         if e.response['Error']['Code'] == 'ResourceConflictException':
                             pass
-
+                        elif e.response['Error']['Code'] == 'UnrecognizedClientException':
+                            print("Enable security hub in region \"{}\" failed. Perhaps that region is not enabled in this account".format(aws_region))
+                            continue
                     if args.enable_standards:
                         regional_standards_arns = [utils.get_standard_arn_for_region_and_resource(aws_region, standard) for standard in standards_arns]
                         batch_enable_standards_input = [{'StandardsArn': standard_arn} for standard_arn in regional_standards_arns]
