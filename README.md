@@ -70,6 +70,11 @@ This sample code is made available under a modified MIT license. See the LICENSE
 If you do not have a common role that includes at least the above permissions you will need to create a role in each member account as well as the master account with at least the above permissions.  When creating the role ensure you use the same role name in every account.  You can use the EnableSecurityHub.yaml CloudFormation Template to automate this process, as the template creates only global resources it can be created in any region.    
 
 * A CSV file that includes the list of accounts to be linked to the master account.  Accounts should be listed one per line in the format of AccountId,EmailAddress.  The EmailAddress must be the email associated with the root account.
+
+For example, accounts.csv should be:
+```
+012345678912,aws-amazon@amazon.com
+```
 * Master AccountId which will receive findings for all the linked accounts within the CSV file 
 
 ## Steps
@@ -142,6 +147,11 @@ optional arguments:
   --enable_standards ENABLE_STANDARDS
                         comma separated list of standards ARNs to enable (ex: arn:aws:securityhub:::ruleset/cis-aws-foundations-benchmark/v/1.2.0 )
   
+```
+
+Example:
+```
+python3 enablesecurity.py --master_account [Account_ID] --assume_role SecurityHubRole --enabled_regions us-west-2,us-west-1 accounts.csv
 ```
     
 #### 2b. Disable Security Hub
