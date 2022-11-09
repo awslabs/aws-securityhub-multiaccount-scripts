@@ -1,0 +1,78 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Creates a new role to allow enabling cis14 and disabling cis12 in SecurityHub.
+
+Parameters:
+  AdministratorAccountId:
+    Type: String
+    Description: AWS Account Id of the administrator account (the account tied to the credentials you will be using, when running a script to make changes to this account.).
+    MaxLength: 12
+    MinLength: 12
+  CreateInstanceRole:
+    Type: String
+    Description: Select Yes to create an EC2 instance role that can be attached to an instnace in the Master account which will allow the instance to assume the exection role.  Select No if you plan to run the script locally or are creating the stack in a member account.
+    AllowedValues: ["Yes", "No"]
+Conditions:
+  CreateInstanceRole: !Equals [!Ref CreateInstanceRole, "Yes"]
+Resources:
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: ManageSecurityHubCIS
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS:
+                - !Ref AdministratorAccountId
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: ManageSecurityHub
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action: [
+                          "securityhub:BatchEnableStandards",
+                          "securityhub:BatchDisableStandards",
+                          "securityhub:GetEnabledStandards",
+                          "securityhub:DescribeStandardsControls",
+                          "securityhub:UpdateStandardsControl"
+                        ]
+                Resource: "*"
+
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Condition: CreateInstanceRole
+    Properties:
+      RoleName: ManageSecurityHubCISInstanceRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement: 
+          - 
+            Effect: "Allow"
+            Principal: 
+              Service: 
+                - "ec2.amazonaws.com"
+            Action: 
+              - "sts:AssumeRole"
+      Policies:
+      -
+        PolicyName: ManageSecurityHubPolicy
+        PolicyDocument: 
+          Version: "2012-10-17"
+          Statement: 
+            - 
+              Effect: "Allow"
+              Action: "sts:AssumeRole"
+              Resource: !Join ["", ["arn:aws:iam::*:role/",!Ref ExecutionRole]]
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Condition: CreateInstanceRole
+    Properties: 
+      Path: /
+      Roles:
+        - !Ref InstanceRole
+      InstanceProfileName: EnableSecurityHubCIS
