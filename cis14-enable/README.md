@@ -107,7 +107,7 @@ required arguments:
   --enabled_regions ENABLED_REGIONS
                         comma separated list of regions to the CIS v1.4 standard.
                         If not specified, all available regions are enabled.
-  ----map_cis12_disabled_controls MAP_CIS12_DISABLED_CONTROLS
+  --map_cis12_disabled_controls MAP_CIS12_DISABLED_CONTROLS
                         Yes or No value indidating if any CIS 1.4 controls should be disabled if they map to a CIS 1.2 control that is currently disabled in the account and region.
   --disable_cis12 DISABLE_CIS12
                         Yes or No value indicating if the CIS 1.2 standard should be disabled after enabling CIS 1.4.
