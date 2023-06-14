@@ -7,6 +7,8 @@ The three scenarios addressed by this repository are:
 * [Multi-account CIS 1.4 enable scripts](cis14-enable) - scripts focused on enabling the Center for Internet Security AWS Foundational Best Practices v1.4 security standard across many accounts.  
 
 * [Multi-account NIST 800-53 enable scripts](nist800-53-enable) - scripts focused on enabling or disabling the NIST 800-53 security standard across many accounts.
+ 
+* [Multi-region automation rules deployment](automation-rules) - scripts focused on deploying automation rules across multiple regions in an account.
 
 
 
