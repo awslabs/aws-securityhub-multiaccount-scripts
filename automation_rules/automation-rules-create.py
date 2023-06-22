@@ -22,9 +22,20 @@ import json
 
 from botocore.exceptions import ClientError
 
-parser = argparse.ArgumentParser(description='Deploy Security Hub automation rules to multiple regions.')
-parser.add_argument('--enabled_regions', type=str, required=False, help="Comma separated list of regions to deploy the rule to. If not specified, rule will be deployed to all available regions.")
-parser.add_argument('--input_file', type=argparse.FileType('r'), help='Path to json file containing the rule definition.')
+parser = argparse.ArgumentParser(
+    description="Deploy Security Hub automation rules to multiple regions."
+)
+parser.add_argument(
+    "--enabled_regions",
+    type=str,
+    required=False,
+    help="Comma separated list of regions to deploy the rule to. If not specified, rule will be deployed to all available regions.",
+)
+parser.add_argument(
+    "--input_file",
+    type=argparse.FileType("r"),
+    help="Path to json file containing the rule definition.",
+)
 args = parser.parse_args()
 
 rule_definition = json.load(args.input_file)
@@ -34,27 +45,32 @@ session = boto3.session.Session()
 
 securityhub_regions = []
 if args.enabled_regions:
-    securityhub_regions = [str(item) for item in args.enabled_regions.split(',')]
+    securityhub_regions = [str(item) for item in args.enabled_regions.split(",")]
     print("Deploying rule in these regions: {}".format(securityhub_regions))
 else:
-    securityhub_regions = session.get_available_regions('securityhub')
-    print("Deploying rule in all available SecurityHub regions {}".format(securityhub_regions))
+    securityhub_regions = session.get_available_regions("securityhub")
+    print(
+        "Deploying rule in all available SecurityHub regions {}".format(
+            securityhub_regions
+        )
+    )
 
 
 failed_regions = []
 for aws_region in securityhub_regions:
-
-    print('Deploying rule to region: ',aws_region)
-    sh_client = session.client('securityhub', region_name=aws_region)
+    print("Deploying rule to region: ", aws_region)
+    sh_client = session.client("securityhub", region_name=aws_region)
 
     try:
-        response=sh_client.create_automation_rule(**rule_definition)
+        if isinstance(rule_definition, dict):
+            rule_definition = [rule_definition]
+        for rule in rule_definition:
+            sh_client.create_automation_rule(**rule)
+            print(f"Rule {rule.RuleName} deployed successfully.")
 
     except ClientError as e:
-            print("Error Processing Region {}".format(aws_region))
-            failed_regions.append({
-                aws_region: repr(e)
-            })
+        print("Error Processing Region {}".format(aws_region))
+        failed_regions.append({aws_region: repr(e)})
 
 if len(failed_regions) > 0:
     print("---------------------------------------------------------------")
@@ -65,5 +81,3 @@ if len(failed_regions) > 0:
         for region_name, message in region.items():
             print("{}: \n\t{}".format(region_name, message))
     print("---------------------------------------------------------------")
-
-    
