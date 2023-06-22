@@ -60,13 +60,21 @@ failed_regions = []
 for aws_region in securityhub_regions:
     print("Deploying rule to region: ", aws_region)
     sh_client = session.client("securityhub", region_name=aws_region)
-
+    cnt = 1
     try:
         if isinstance(rule_definition, dict):
             rule_definition = [rule_definition]
         for rule in rule_definition:
+            if not "RuleOrder" in rule:
+                rule["RuleOrder"] = cnt
+                cnt += 1
+            if not "Description" in rule:
+                rule[
+                    "Description"
+                ] = f"Automatically created rule for {rule.get('RuleName','')}"
+
             sh_client.create_automation_rule(**rule)
-            print(f"Rule {rule.RuleName} deployed successfully.")
+            print(f"Rule {rule.get('RuleName','')} deployed successfully.")
 
     except ClientError as e:
         print("Error Processing Region {}".format(aws_region))
