@@ -31,39 +31,35 @@ session = boto3.session.Session()
 
 securityhub_regions = []
 if args.deployed_regions:
-    securityhub_regions = [str(item) for item in args.deployed_regions.split(',')]
+    securityhub_regions = [str(item) for item in args.deployed_regions.split(",")]
     print("Listing rules in these regions: {}".format(securityhub_regions))
 else:
     securityhub_regions = session.get_available_regions('securityhub')
     print("Listing rules in all available SecurityHub regions {}".format(securityhub_regions))
 
 for aws_region in securityhub_regions:
-
-    print('*******************************************')
-    print('Retrieving rules from region: ',aws_region)
-    sh_client = session.client('securityhub', region_name=aws_region)
+    print("*******************************************")
+    print("Retrieving rules from region: ", aws_region)
+    sh_client = session.client("securityhub", region_name=aws_region)
 
     try:
-        response=sh_client.list_automation_rules()
-
-        if len(response['AutomationRulesMetadata']) > 0:
-            for msg in response['AutomationRulesMetadata']:
-                rule_arn = msg['RuleArn']
-                rule_name = msg['RuleName']
-                rule_status = msg['RuleStatus']
-                rule_order = msg['RuleOrder']
-                print('------------------------------------')
-                print("Rule ARN: ",rule_arn)
-                print("Rule Name: ",rule_name)
-                print("Rule Status: ",rule_status)
-                print("Rule Order: ",rule_order)
+        rules = sh_client.list_automation_rules(MaxResults=100).get(
+            "AutomationRulesMetadata", []
+        )
+        if rules:
+            for msg in rules:
+                rule_arn = msg["RuleArn"]
+                rule_name = msg["RuleName"]
+                rule_status = msg["RuleStatus"]
+                rule_order = msg["RuleOrder"]
+                print("------------------------------------")
+                print("Rule ARN: ", rule_arn)
+                print("Rule Name: ", rule_name)
+                print("Rule Status: ", rule_status)
+                print("Rule Order: ", rule_order)
         else:
             print("No rules in this region")
 
     except ClientError as e:
-            print("Error Processing Region {}".format(aws_region))
-            print(e)
-            
-
-
-    
+        print("Error Processing Region {}".format(aws_region))
+        print(e)
