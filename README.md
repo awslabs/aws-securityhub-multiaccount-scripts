@@ -8,7 +8,7 @@ The three scenarios addressed by this repository are:
 
 * [Multi-account NIST 800-53 enable scripts](nist800-53-enable) - scripts focused on enabling or disabling the NIST 800-53 security standard across many accounts.
  
-* [Multi-region automation rules deployment](automation-rules) - scripts focused on deploying automation rules across multiple regions in an account.
+* [Multi-region automation rules deployment](automation_rules) - scripts focused on deploying automation rules across multiple regions in an account.
 
 
 
