@@ -1,0 +1,126 @@
+[
+    {
+        "RuleOrder": 1,
+        "RuleName": "sample-rule-critical-A",
+        "RuleStatus": "ENABLED",
+        "Description": "Set finding's severity to Critical for specific finding resource ID",
+        "Criteria":
+        {
+            "ProductName":
+            [
+                {
+                    "Value": "Security Hub",
+                    "Comparison": "EQUALS"
+                }
+            ],
+            "ComplianceStatus":
+            [
+                {
+                    "Value": "FAILED",
+                    "Comparison": "EQUALS"
+                }
+            ],
+            "RecordState":
+            [
+                {
+                    "Value": "ACTIVE",
+                    "Comparison": "EQUALS"
+                }
+            ],
+            "WorkflowStatus":
+            [
+                {
+                    "Value": "NEW",
+                    "Comparison": "EQUALS"
+                }
+            ],
+            "ResourceId":
+            [
+                {
+                    "Value": "arn:aws:s3:::examplebucket/developers/design_info.doc",
+                    "Comparison": "EQUALS"
+                }
+            ]
+        },
+        "Actions":
+        [
+            {
+                "Type": "FINDING_FIELDS_UPDATE",
+                "FindingFieldsUpdate":
+                {
+                    "Severity":
+                    {
+                        "Label": "CRITICAL"
+                    },
+                    "Note":
+                    {
+                        "Text": "Urgent – look into this critical S3 bucket",
+                        "UpdatedBy": "sechub-automation"
+                    }
+                }
+            }
+        ]
+    },
+    {
+        "RuleOrder": 2,
+        "RuleName": "sample-rule-critical-B",
+        "RuleStatus": "ENABLED",
+        "Description": "Set finding's severity to Critical for specific finding resource ID",
+        "Criteria":
+        {
+            "ProductName":
+            [
+                {
+                    "Value": "Security Hub",
+                    "Comparison": "EQUALS"
+                }
+            ],
+            "ComplianceStatus":
+            [
+                {
+                    "Value": "FAILED",
+                    "Comparison": "EQUALS"
+                }
+            ],
+            "RecordState":
+            [
+                {
+                    "Value": "ACTIVE",
+                    "Comparison": "EQUALS"
+                }
+            ],
+            "WorkflowStatus":
+            [
+                {
+                    "Value": "NEW",
+                    "Comparison": "EQUALS"
+                }
+            ],
+            "ResourceId":
+            [
+                {
+                    "Value": "arn:aws:s3:::examplebucket/developers/design_info.doc",
+                    "Comparison": "EQUALS"
+                }
+            ]
+        },
+        "Actions":
+        [
+            {
+                "Type": "FINDING_FIELDS_UPDATE",
+                "FindingFieldsUpdate":
+                {
+                    "Severity":
+                    {
+                        "Label": "CRITICAL"
+                    },
+                    "Note":
+                    {
+                        "Text": "Urgent – look into this critical S3 bucket",
+                        "UpdatedBy": "sechub-automation"
+                    }
+                }
+            }
+        ]
+    }
+]

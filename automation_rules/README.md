@@ -13,7 +13,7 @@ This sample code is made available under a modified MIT license. See the LICENSE
 
 
 ## Prerequisites
-The **automation-rule-create.py** script depends on a file containing the json definition of the rule that needs to be deployed.  The schema for an automation rule definition is outlined [HERE.](https://docs.aws.amazon.com/securityhub/1.0/APIReference/API_CreateAutomationRule.html)  This repository contains an example rule definition in the automation-rule-definition.json file.
+The **automation-rule-create.py** script depends on a file containing the json definition of the rule that needs to be deployed.  The schema for an automation rule definition is outlined [HERE.](https://docs.aws.amazon.com/securityhub/1.0/APIReference/API_CreateAutomationRule.html)  This repository contains an example of a single rule definition in the **automation-rule-definition.json** file.  If you want to deploy multiple rules the **automation-rule-definition-mult-rules.json** file contains an example of how to define multiple rules.  
 
 
 ## Steps to deploy an automation rule
