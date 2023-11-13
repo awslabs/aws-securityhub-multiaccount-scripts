@@ -98,7 +98,19 @@ for aws_region in securityhub_regions:
             next_token = response.get("NextToken")
             if not next_token:
                 break
-
+        if rules:
+            for msg in rules:
+                rule_arn = msg["RuleArn"]
+                rule_name = msg["RuleName"]
+                rule_status = msg["RuleStatus"]
+                rule_order = msg["RuleOrder"]
+                print("------------------------------------")
+                print("Rule ARN: ", rule_arn)
+                print("Rule Name: ", rule_name)
+                print("Rule Status: ", rule_status)
+                print("Rule Order: ", rule_order)
+        else:
+            print("No rules in this region")
         # Getting full rule definitions
         if rule_arns:
             rule_defs_response = sh_client.batch_get_automation_rules(
