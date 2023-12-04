@@ -1,5 +1,14 @@
 ## AWS Security Hub multi-account CIS 1.4 enable script
 
+*****
+> **Note:**<br>
+> Security Hub now supports central configuration for security standards and controls across accounts. 
+>
+> Security Hub's central configration feature addresses many of the scenarios that are covered by the scripts in this repository, reducing or eliminating the need to run these scripts.  Please refer to the [Security Hub central configuration documentation](https://docs.aws.amazon.com/securityhub/latest/userguide/central-configuration-intro.html) first before going forward with using these scripts.
+*****
+
+
+
 These scripts automate the process of enabling the CIS v1.4 security standard and disabling the CIS v1.2 security standard in AWS Security Hub simultaneously across a group of AWS accounts that are in your control. (Note, that you can have one administrator account and up to a 5000 member accounts).
 
 The **enablecis14.py** script will do the following for each account and region provided to the script:

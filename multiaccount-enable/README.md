@@ -1,5 +1,15 @@
 ## AWS Security Hub multi-account enable scripts
 
+
+*****
+> **Note:**<br>
+> Security Hub now supports central configuration for security standards and controls across accounts. 
+>
+> Security Hub's central configration feature addresses many of the scenarios that are covered by the scripts in this repository, reducing or eliminating the need to run these scripts.  Please refer to the [Security Hub central configuration documentation](https://docs.aws.amazon.com/securityhub/latest/userguide/central-configuration-intro.html) first before going forward with using these scripts.
+*****
+
+
+
 These scripts automate the process of enabling and disabling AWS Security Hub simultaneously across a group of AWS accounts that are in your control. (Note, that you can have one administrator account and up to a 5000 member accounts).
 
 The **enablesecurityhub.py** script will enable Security Hub, send invitations from the master account and accept invitations in all member accounts. The result will be a master account that contains all security findings for all member accounts. Since Security Hub is regionally isolated, findings for each member account will roll up to the corresponding region in the master account. For example, the us-east-1 region in your Security Hub master account will contain the security findings for all us-east-1 findings from all associated member accounts. If you enable standards (such as CIS or PCI DSS), AWS Config must be enabled. If there are regions where AWS Config is not already enabled, the script will enable it.
