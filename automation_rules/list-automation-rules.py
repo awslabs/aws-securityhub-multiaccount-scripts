@@ -30,14 +30,28 @@ args = parser.parse_args()
 session = boto3.session.Session()
 
 securityhub_regions = []
+eligible_regions = []
 if args.deployed_regions:
-    securityhub_regions = [str(item) for item in args.deployed_regions.split(",")]
-    print("Listing rules in these regions: {}".format(securityhub_regions))
+    eligible_regions = [str(item) for item in args.deployed_regions.split(",")]
+    print("Listing rules in these regions: {}".format(eligible_regions))
 else:
-    securityhub_regions = session.get_available_regions('securityhub')
-    print("Listing rules in all available SecurityHub regions {}".format(securityhub_regions))
+    print("No regions provided.  Getting list of eligible regions")
+    securityhub_regions = session.get_available_regions("securityhub")
+    for aws_region in securityhub_regions:
+        acct_client = session.client("account")
+        acct_response = acct_client.get_region_opt_status(RegionName=aws_region)
+        region_status=(acct_response['RegionOptStatus'])
+        if region_status in ['ENABLED','ENABLED_BY_DEFAULT']:
+            eligible_regions.append(aws_region)
 
-for aws_region in securityhub_regions:
+    print(
+        "Listing rules in all available SecurityHub regions {}".format(
+            eligible_regions
+        )
+    )
+
+
+for aws_region in eligible_regions:
     print("*******************************************")
     print("Retrieving rules from region: ", aws_region)
     sh_client = session.client("securityhub", region_name=aws_region)
