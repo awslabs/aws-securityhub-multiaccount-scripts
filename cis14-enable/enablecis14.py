@@ -74,7 +74,7 @@ if __name__ == '__main__':
     # Setup command line arguments
     parser = argparse.ArgumentParser(description='Enable CIS 1.4 in Security Hub accounts')
     parser.add_argument('--assume_role', type=str, required=True, help="Role Name to assume in each account.")
-    parser.add_argument('--enabled_regions', type=str, required=True, help="Comma separated list of regions to enable CIS 1.4. If not specified, all available regions enabled.")
+    parser.add_argument('--enabled_regions', type=str, required=False, help="Comma separated list of regions to enable CIS 1.4. If not specified, all available regions enabled.")
     parser.add_argument('--map_cis12_disabled_controls', type=str, required=True, help="Yes or No value indidating if any CIS 1.4 controls should be disabled if they map to a CIS 1.2 control that is currently disabled in the account and region.")
     parser.add_argument('--disable_cis12', type=str, required=True, help="Yes or No value indicating if the CIS 1.2 standard should be disabled after enabling CIS 1.4.")
     parser.add_argument('--input_file', type=argparse.FileType('r'), help='Path to txt file containing the list of account IDs.')
