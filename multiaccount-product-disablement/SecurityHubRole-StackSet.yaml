@@ -1,0 +1,45 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Deploy SecurityHubRole for product disablement across member accounts'
+
+Parameters:
+  DelegatedAdminAccountId:
+    Type: String
+    Description: 'Account ID of the Security Hub Delegated Administrator'
+    AllowedPattern: '^\d{12}$'
+    ConstraintDescription: 'Must be a 12-digit AWS account ID'
+
+Resources:
+  SecurityHubRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: SecurityHubRole
+      Description: 'Role for Security Hub Delegated Admin to disable product integrations'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${DelegatedAdminAccountId}:root'
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: SecurityHubProductManagement
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'securityhub:DisableImportFindingsForProduct'
+                  - 'securityhub:ListMembers'
+                Resource: '*'
+      Tags:
+        - Key: Purpose
+          Value: SecurityHubProductDisablement
+        - Key: ManagedBy
+          Value: CloudFormationStackSet
+
+Outputs:
+  RoleArn:
+    Description: 'ARN of the created SecurityHub role'
+    Value: !GetAtt SecurityHubRole.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-RoleArn'
